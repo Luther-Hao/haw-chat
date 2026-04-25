@@ -1,8 +1,115 @@
 "use client";
 
-import { motion, useScroll } from "framer-motion";
+import { useState, useCallback, useEffect } from "react";
+import { motion, useSpring, useScroll } from "framer-motion";
 import { useRef } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Check } from "lucide-react";
+
+// Magnetic Button Component
+function MagneticButton({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<typeof motion.button>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useSpring(0, { stiffness: 300, damping: 20 });
+  const y = useSpring(0, { stiffness: 300, damping: 20 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const distX = e.clientX - centerX;
+    const distY = e.clientY - centerY;
+    const distance = Math.sqrt(distX * distX + distY * distY);
+    const maxDist = 30;
+
+    if (distance < maxDist) {
+      x.set(distX * 0.3);
+      y.set(distY * 0.3);
+    } else {
+      x.set(0);
+      y.set(0);
+    }
+  }, [x, y]);
+
+  const handleMouseLeave = useCallback(() => {
+    x.set(0);
+    y.set(0);
+  }, [x, y]);
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <motion.div style={{ x, y }}>
+        <motion.button
+          className={className}
+          {...props}
+        >
+          {children}
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+// Magnetic Link Component
+function MagneticLink({
+  href,
+  children,
+  className,
+  ...props
+}: React.ComponentProps<typeof motion.a>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useSpring(0, { stiffness: 300, damping: 20 });
+  const y = useSpring(0, { stiffness: 300, damping: 20 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const distX = e.clientX - centerX;
+    const distY = e.clientY - centerY;
+    const distance = Math.sqrt(distX * distX + distY * distY);
+    const maxDist = 30;
+
+    if (distance < maxDist) {
+      x.set(distX * 0.3);
+      y.set(distY * 0.3);
+    } else {
+      x.set(0);
+      y.set(0);
+    }
+  }, [x, y]);
+
+  const handleMouseLeave = useCallback(() => {
+    x.set(0);
+    y.set(0);
+  }, [x, y]);
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <motion.div style={{ x, y }}>
+        <motion.a
+          href={href}
+          className={className}
+          {...props}
+        >
+          {children}
+        </motion.a>
+      </motion.div>
+    </div>
+  );
+}
 
 // Custom SVG Icons for Social Links
 const XIcon = () => (
@@ -51,9 +158,42 @@ export default function Footer() {
     offset: ["start end", "end end"],
   });
 
+  const [isCopied, setIsCopied] = useState(false);
+  const [isHoveringEmail, setIsHoveringEmail] = useState(false);
+  const [marqueeSpeed, setMarqueeSpeed] = useState("");
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const copyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText("hello@haoflow.com");
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.log("Failed to copy email");
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPosition = window.scrollY;
+      const scrollPercentage = scrollPosition / scrollHeight;
+
+      if (scrollPercentage > 0.7) {
+        setMarqueeSpeed("slow");
+      } else if (scrollPercentage > 0.85) {
+        setMarqueeSpeed("slower");
+      } else {
+        setMarqueeSpeed("");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <footer
@@ -76,7 +216,7 @@ export default function Footer() {
           >
             <div className="overflow-hidden">
               <motion.h2
-                className="text-display text-[clamp(60px,12vw,160px)] leading-none"
+                className="text-headline-brutal text-[clamp(60px,12vw,160px)]"
                 initial={{ y: "100%" }}
                 whileInView={{ y: "0%" }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -87,7 +227,7 @@ export default function Footer() {
             </div>
             <div className="overflow-hidden">
               <motion.h2
-                className="text-display text-[clamp(60px,12vw,160px)] leading-none gradient-text"
+                className="text-headline-brutal text-[clamp(60px,12vw,160px)] gradient-text-vibrant"
                 initial={{ y: "100%" }}
                 whileInView={{ y: "0%" }}
                 transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
@@ -100,38 +240,59 @@ export default function Footer() {
 
           {/* CTA and Links */}
           <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-12">
-            {/* CTA Button */}
+            {/* CTA Button - Click to Copy */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              <a
-                href="mailto:hello@haoflow.com"
-                className="group relative inline-flex items-center gap-4"
+              <button
+                onClick={copyEmail}
+                onMouseEnter={() => setIsHoveringEmail(true)}
+                onMouseLeave={() => setIsHoveringEmail(false)}
+                className="group relative inline-flex items-center gap-4 bg-transparent border-none p-0 cursor-none"
                 data-cursor-hover
               >
-                <span className="text-headline text-3xl md:text-5xl hover:text-[var(--accent-primary)] transition-colors duration-300">
+                <span className="text-headline-brutal text-[clamp(24px,4vw,48px)] hover:text-[var(--accent-primary)] transition-colors duration-300">
                   hello@haoflow.com
                 </span>
                 <motion.div
-                  className="w-12 h-12 rounded-full bg-[var(--accent-primary)] flex items-center justify-center"
-                  whileHover={{ scale: 1.1, rotate: 45 }}
+                  className="w-12 h-12 rounded-full bg-[var(--accent-primary)] flex items-center justify-center relative"
+                  animate={{
+                    scale: isHoveringEmail ? 1.1 : 1,
+                    rotate: isHoveringEmail ? 45 : 0
+                  }}
                   transition={{ duration: 0.3 }}
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="2"
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
+                  {isCopied ? (
+                    <Check size={20} className="text-white" />
+                  ) : (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="2"
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  )}
                 </motion.div>
-              </a>
+                {/* Copied Tooltip */}
+                <motion.div
+                  className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-[var(--accent-green)] text-[var(--bg-primary)] text-sm font-bold rounded-none"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{
+                    opacity: isCopied ? 1 : 0,
+                    y: isCopied ? 0 : 10
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Copied!
+                </motion.div>
+              </button>
             </motion.div>
 
             {/* Navigation Links */}
@@ -181,7 +342,7 @@ export default function Footer() {
               </span>
             </motion.div>
 
-            {/* Social Links */}
+            {/* Social Links - Magnetic Hover, Brutalist Design */}
             <motion.div
               className="flex items-center gap-4"
               initial={{ opacity: 0 }}
@@ -190,22 +351,21 @@ export default function Footer() {
               viewport={{ once: true }}
             >
               {socialLinks.map((social, index) => (
-                <motion.a
+                <MagneticLink
                   key={social.label}
                   href={social.href}
-                  className="w-10 h-10 rounded-full border border-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all duration-300"
-                  whileHover={{ y: -4 }}
+                  className="w-10 h-10 border border-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-all duration-300"
                   data-cursor-hover
                 >
                   <social.icon />
-                </motion.a>
+                </MagneticLink>
               ))}
             </motion.div>
 
-            {/* Back to Top */}
-            <motion.button
+            {/* Back to Top - Magnetic Hover, Brutalist Design */}
+            <MagneticButton
               onClick={scrollToTop}
-              className="group flex items-center gap-3 px-6 py-3 bg-[var(--bg-card)] rounded-full border border-[var(--bg-tertiary)] hover:border-[var(--accent-primary)] transition-all duration-300"
+              className="group flex items-center gap-3 px-6 py-3 bg-[var(--bg-card)] border border-[var(--bg-tertiary)] hover:border-[var(--accent-primary)] transition-all duration-300"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.7 }}
@@ -216,13 +376,13 @@ export default function Footer() {
                 Back to top
               </span>
               <motion.div
-                className="w-8 h-8 rounded-full bg-[var(--accent-primary)] flex items-center justify-center"
+                className="w-8 h-8 bg-[var(--accent-primary)] flex items-center justify-center"
                 animate={{ y: [0, -4, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               >
                 <ArrowUp size={16} className="text-white" />
               </motion.div>
-            </motion.button>
+            </MagneticButton>
           </div>
         </div>
       </div>
@@ -233,32 +393,32 @@ export default function Footer() {
         <div className="absolute bottom-20 right-20 w-48 h-48 rounded-full bg-[var(--accent-green)] blur-[100px]" />
       </div>
 
-      {/* Marquee */}
+      {/* Marquee - Scroll Speed Dampening */}
       <div className="border-t border-b border-[var(--bg-tertiary)] py-4 overflow-hidden">
-        <div className="marquee">
+        <div className={`marquee ${marqueeSpeed}`}>
           <div className="marquee-content">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="flex items-center gap-8 pr-8">
                 <span className="text-display text-2xl text-[var(--text-muted)] whitespace-nowrap">
                   Creative Design
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
+                <span className="w-2 h-2 bg-[var(--accent-primary)]" />
                 <span className="text-display text-2xl text-[var(--text-muted)] whitespace-nowrap">
                   Web Development
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[var(--accent-green)]" />
+                <span className="w-2 h-2 bg-[var(--accent-green)]" />
                 <span className="text-display text-2xl text-[var(--text-muted)] whitespace-nowrap">
                   Motion Design
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
+                <span className="w-2 h-2 bg-[var(--accent-primary)]" />
                 <span className="text-display text-2xl text-[var(--text-muted)] whitespace-nowrap">
                   Branding
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[var(--accent-green)]" />
+                <span className="w-2 h-2 bg-[var(--accent-green)]" />
                 <span className="text-display text-2xl text-[var(--text-muted)] whitespace-nowrap">
                   Digital Products
                 </span>
-                <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
+                <span className="w-2 h-2 bg-[var(--accent-primary)]" />
               </div>
             ))}
           </div>

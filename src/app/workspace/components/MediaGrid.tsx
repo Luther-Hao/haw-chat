@@ -99,7 +99,7 @@ export default function MediaGrid() {
           {projects.map((project, index) => (
             <motion.div
               key={project.id}
-              className={`bento-item group relative overflow-hidden rounded-2xl ${
+              className={`bento-item group relative overflow-hidden ${
                 project.size === "large"
                   ? "col-span-4 row-span-2 md:col-span-4 md:row-span-2"
                   : "col-span-4 md:col-span-2"
@@ -211,7 +211,7 @@ export default function MediaGrid() {
           ))}
         </div>
 
-        {/* View All Button */}
+        {/* View All Button - Increased Weight, Brutalist Style */}
         <motion.div
           className="mt-16 flex justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -219,7 +219,10 @@ export default function MediaGrid() {
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <button className="magnetic-button" data-cursor-hover>
+          <button
+            className="magnetic-button text-lg px-12 py-5 border-2 font-bold tracking-[0.15em]"
+            data-cursor-hover
+          >
             <span className="relative z-10">View All Projects</span>
           </button>
         </motion.div>

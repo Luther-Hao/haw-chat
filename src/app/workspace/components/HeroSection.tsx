@@ -169,7 +169,7 @@ export default function HeroSection() {
 
       {/* Main Content */}
       <div className="relative z-10 text-center px-4">
-        {/* Main Headline */}
+        {/* Main Headline - Brutalist Typography */}
         <div className="overflow-hidden mb-4">
           <motion.div
             className="flex justify-center"
@@ -178,7 +178,7 @@ export default function HeroSection() {
             variants={wordVariants}
             custom={0}
           >
-            <h1 className="text-display text-[clamp(80px,15vw,200px)] leading-none">
+            <h1 className="text-headline-brutal text-[clamp(80px,15vw,200px)]">
               {headline.split("").map((letter, i) => (
                 <motion.span
                   key={i}
@@ -195,7 +195,7 @@ export default function HeroSection() {
           </motion.div>
         </div>
 
-        {/* Subheadline */}
+        {/* Subheadline - Brutalist Typography */}
         <div className="overflow-hidden">
           <motion.div
             className="flex justify-center"
@@ -205,8 +205,8 @@ export default function HeroSection() {
             custom={1}
           >
             <h2
-              className="text-headline text-[clamp(40px,8vw,120px)] text-[var(--accent-primary)] leading-none"
-              style={{ letterSpacing: "0.2em" }}
+              className="text-headline-brutal text-[clamp(40px,8vw,120px)] gradient-text-vibrant"
+              style={{ letterSpacing: "-0.05em", lineHeight: "0.85" }}
             >
               {subheadline.split("").map((letter, i) => (
                 <motion.span

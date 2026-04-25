@@ -7,8 +7,10 @@ export default function CustomCursor() {
   const [isHovering, setIsHovering] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
   const cursorRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const mouseX = useSpring(0, { stiffness: 500, damping: 28 });
   const mouseY = useSpring(0, { stiffness: 500, damping: 28 });
@@ -39,6 +41,21 @@ export default function CustomCursor() {
       setIsVisible(true);
     };
 
+    const handleScroll = () => {
+      // Hide cursor during scroll
+      setIsScrolling(true);
+
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Show cursor after scroll stops (300ms debounce)
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 300);
+    };
+
     const checkHoverTargets = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const isHoverable =
@@ -56,12 +73,17 @@ export default function CustomCursor() {
     document.addEventListener("mouseleave", handleMouseLeave);
     document.addEventListener("mouseenter", handleMouseEnter);
     document.addEventListener("mouseover", checkHoverTargets);
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
       document.removeEventListener("mouseenter", handleMouseEnter);
       document.removeEventListener("mouseover", checkHoverTargets);
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
   }, [mouseX, mouseY]);
 
@@ -75,7 +97,7 @@ export default function CustomCursor() {
         className="custom-cursor"
         animate={{
           scale: isHovering ? 2.5 : 1,
-          opacity: isVisible ? 1 : 0,
+          opacity: isScrolling ? 0 : (isVisible ? 1 : 0),
           backgroundColor: isHovering ? "rgba(255, 107, 53, 0.3)" : "transparent",
           borderColor: isHovering ? "#FF6B35" : "#ffffff",
         }}
@@ -104,7 +126,7 @@ export default function CustomCursor() {
         ref={dotRef}
         animate={{
           scale: isHovering ? 0 : 1,
-          opacity: isVisible ? 1 : 0,
+          opacity: isScrolling ? 0 : (isVisible ? 1 : 0),
         }}
         transition={{
           scale: { duration: 0.15 },

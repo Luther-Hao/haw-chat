@@ -165,14 +165,29 @@ a, button, [role="button"], input, textarea, select {
   }
 }
 
-/* Noise Texture Overlay */
+/* Noise/Grain Texture Overlay - Tactile Feel */
 .noise-overlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 99998;
+  z-index: 99997;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseCaps='1' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  background-repeat: repeat;
+}
+
+/* Grain Overlay - Tactile Texture */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99997;
   opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  background-repeat: repeat;
+  background-size: 200px 200px;
 }
 
 /* Typography Classes */
@@ -188,6 +203,30 @@ a, button, [role="button"], input, textarea, select {
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.1;
+}
+
+/* Brutalist Typography - Hero headlines with tight tracking */
+.text-headline-brutal {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.85;
+}
+
+/* 3-stop vibrant gradient text */
+.gradient-text-vibrant {
+  background: linear-gradient(90deg, #FF5C00 0%, #D9FF00 50%, #32CD32 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Existing gradient-text - keep for backwards compatibility */
+.gradient-text {
+  background: linear-gradient(90deg, #FF5C00 0%, #D9FF00 50%, #32CD32 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .text-body {
@@ -334,7 +373,7 @@ a, button, [role="button"], input, textarea, select {
   position: relative;
   overflow: hidden;
   background: var(--bg-card);
-  border-radius: 16px;
+  /* Brutalist Design: Hard edges, 0px border-radius */
 }
 
 .bento-item.large {
@@ -451,20 +490,51 @@ a, button, [role="button"], input, textarea, select {
   }
 }
 
-/* Marquee */
+/* Marquee - Seamless Infinite with Scroll Speed-Dampening */
 .marquee {
   display: flex;
   overflow: hidden;
   user-select: none;
+  position: relative;
+}
+
+.marquee::before,
+.marquee::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.marquee::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-secondary), transparent);
+}
+
+.marquee::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-secondary), transparent);
 }
 
 .marquee-content {
   display: flex;
   animation: marquee 30s linear infinite;
+  will-change: transform;
 }
 
-.marquee-content:hover {
+.marquee:hover .marquee-content {
   animation-play-state: paused;
+}
+
+.marquee.slow .marquee-content {
+  animation-duration: 60s;
+}
+
+.marquee.slower .marquee-content {
+  animation-duration: 120s;
 }
 
 @keyframes marquee {
