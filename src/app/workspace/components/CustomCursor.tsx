@@ -11,6 +11,8 @@ export default function CustomCursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPositionRef = useRef({ x: 0, y: 0 });
+  const shouldUpdatePositionRef = useRef(true);
 
   const mouseX = useSpring(0, { stiffness: 500, damping: 28 });
   const mouseY = useSpring(0, { stiffness: 500, damping: 28 });
@@ -21,6 +23,12 @@ export default function CustomCursor() {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Store last position for when scrolling ends
+      lastPositionRef.current = { x: e.clientX, y: e.clientY };
+
+      // Skip position update during scroll to prevent cursor flying
+      if (!shouldUpdatePositionRef.current) return;
+
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
       setIsVisible(true);
@@ -42,18 +50,31 @@ export default function CustomCursor() {
     };
 
     const handleScroll = () => {
-      // Hide cursor during scroll
+      // Hide cursor and stop position updates during scroll
       setIsScrolling(true);
+      shouldUpdatePositionRef.current = false;
 
       // Clear existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Show cursor after scroll stops (300ms debounce)
+      // Show cursor and resume position updates after scroll stops
       scrollTimeoutRef.current = setTimeout(() => {
         setIsScrolling(false);
-      }, 300);
+        shouldUpdatePositionRef.current = true;
+
+        // Restore cursor to last known position
+        const lastPos = lastPositionRef.current;
+        if (cursorRef.current) {
+          cursorRef.current.style.transform = `translate(${lastPos.x}px, ${lastPos.y}px)`;
+        }
+        if (dotRef.current) {
+          dotRef.current.style.transform = `translate(${lastPos.x}px, ${lastPos.y}px)`;
+        }
+        mouseX.set(lastPos.x);
+        mouseY.set(lastPos.y);
+      }, 150);
     };
 
     const checkHoverTargets = (e: MouseEvent) => {
