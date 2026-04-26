@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 
 export default function CustomCursor() {
-  const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   const cursorRingRef = useRef<HTMLDivElement>(null);
@@ -12,15 +11,15 @@ export default function CustomCursor() {
   // Track mouse position
   const mousePosition = useRef({ x: 0, y: 0 });
   const isVisible = useRef(false);
+  const isHovering = useRef(false);
   const animationFrameId = useRef<number | null>(null);
 
-  // Current animated position (for smooth interpolation)
+  // Current animated position
   const currentPos = useRef({ x: 0, y: 0 });
 
-  // Spring physics parameters
-  const springConfig = { stiffness: 150, damping: 18, mass: 0.8 };
-  const velocity = useRef({ x: 0, y: 0 });
-  const lastTime = useRef(performance.now());
+  // High-performance lerp parameters for snappy response
+  // Higher lerp factor = faster catch-up = less latency
+  const LERP_FACTOR = 0.5; // 0.5 = 50% interpolation per frame (very snappy)
 
   useEffect(() => {
     setIsMounted(true);
@@ -36,7 +35,6 @@ export default function CustomCursor() {
 
     const handleMouseMove = (e: MouseEvent) => {
       // Use clientX/clientY for viewport-relative coordinates
-      // These are independent of scroll position
       mousePosition.current = { x: e.clientX, y: e.clientY };
       isVisible.current = true;
     };
@@ -51,61 +49,53 @@ export default function CustomCursor() {
 
     const checkHoverTargets = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const isHoverable =
+      isHovering.current = !!(
         target.tagName === "BUTTON" ||
         target.tagName === "A" ||
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.closest("button") ||
         target.closest("a") ||
-        target.closest("[data-cursor-hover]");
-      setIsHovering(!!isHoverable);
+        target.closest("[data-cursor-hover]")
+      );
     };
 
-    // Spring physics update function
-    const updateCursor = (time: number) => {
-      const deltaTime = Math.min((time - lastTime.current) / 16.67, 2); // Normalize to ~60fps, cap at 2x
-      lastTime.current = time;
-
-      // Spring physics interpolation
+    // High-performance animation loop
+    const updateCursor = () => {
       const targetX = mousePosition.current.x;
       const targetY = mousePosition.current.y;
 
-      // Calculate spring force
-      const dx = targetX - currentPos.current.x;
-      const dy = targetY - currentPos.current.y;
+      // Fast linear interpolation for snappy response
+      currentPos.current.x += (targetX - currentPos.current.x) * LERP_FACTOR;
+      currentPos.current.y += (targetY - currentPos.current.y) * LERP_FACTOR;
 
-      // Spring acceleration
-      const ax = dx * springConfig.stiffness * 0.001 * deltaTime;
-      const ay = dy * springConfig.stiffness * 0.001 * deltaTime;
-
-      // Apply damping
-      velocity.current.x = (velocity.current.x + ax) * Math.pow(0.85, deltaTime);
-      velocity.current.y = (velocity.current.y + ay) * Math.pow(0.85, deltaTime);
-
-      // Update position
-      currentPos.current.x += velocity.current.x * deltaTime;
-      currentPos.current.y += velocity.current.y * deltaTime;
-
-      // Snap to target if close enough
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 0.5) {
+      // Snap to target if within threshold (prevents infinite small updates)
+      const dx = Math.abs(targetX - currentPos.current.x);
+      const dy = Math.abs(targetY - currentPos.current.y);
+      if (dx < 0.1 && dy < 0.1) {
         currentPos.current.x = targetX;
         currentPos.current.y = targetY;
-        velocity.current.x = 0;
-        velocity.current.y = 0;
       }
 
-      // Apply position using translate3d for GPU acceleration
-      const posX = currentPos.current.x;
-      const posY = currentPos.current.y;
+      // Calculate scale based on hover state
+      const scale = isHovering.current ? 2.5 : 1;
+      const ringWidth = 20 * scale;
+      const ringMargin = -ringWidth / 2;
 
-      // Update cursor ring
-      cursorRing.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+      // Apply GPU-accelerated transforms
+      // Using translate3d for hardware acceleration and will-change hint
+      cursorRing.style.transform = `translate3d(${currentPos.current.x}px, ${currentPos.current.y}px, 0) scale(${scale})`;
+      cursorRing.style.width = `${ringWidth}px`;
+      cursorRing.style.height = `${ringWidth}px`;
+      cursorRing.style.marginLeft = `${ringMargin}px`;
+      cursorRing.style.marginTop = `${ringMargin}px`;
       cursorRing.style.opacity = isVisible.current ? "1" : "0";
+      cursorRing.style.borderColor = isHovering.current ? "#FF6B35" : "#ffffff";
+      cursorRing.style.backgroundColor = isHovering.current ? "rgba(255, 107, 53, 0.3)" : "transparent";
 
-      // Update cursor dot
-      cursorDot.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+      // Update dot (hidden when hovering)
+      const dotScale = isHovering.current ? 0 : 1;
+      cursorDot.style.transform = `translate3d(${currentPos.current.x}px, ${currentPos.current.y}px, 0) scale(${dotScale})`;
       cursorDot.style.opacity = isVisible.current ? "1" : "0";
 
       animationFrameId.current = requestAnimationFrame(updateCursor);
@@ -136,7 +126,7 @@ export default function CustomCursor() {
 
   return (
     <>
-      {/* Main cursor ring - using position fixed + translate3d */}
+      {/* Main cursor ring - GPU optimized with will-change */}
       <div
         ref={cursorRingRef}
         className="custom-cursor"
@@ -151,11 +141,11 @@ export default function CustomCursor() {
           pointerEvents: "none",
           zIndex: 99999,
           mixBlendMode: "difference",
-          willChange: "transform, opacity",
+          willChange: "transform, opacity, width, height, margin",
         }}
       />
 
-      {/* Cursor dot */}
+      {/* Cursor dot - GPU optimized */}
       <div
         ref={cursorDotRef}
         style={{
