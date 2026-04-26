@@ -1,80 +1,52 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { motion, useSpring } from "framer-motion";
 
 export default function CustomCursor() {
   const [isHovering, setIsHovering] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const dotRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPositionRef = useRef({ x: 0, y: 0 });
-  const shouldUpdatePositionRef = useRef(true);
 
-  const mouseX = useSpring(0, { stiffness: 500, damping: 28 });
-  const mouseY = useSpring(0, { stiffness: 500, damping: 28 });
+  const cursorRingRef = useRef<HTMLDivElement>(null);
+  const cursorDotRef = useRef<HTMLDivElement>(null);
+
+  // Track mouse position
+  const mousePosition = useRef({ x: 0, y: 0 });
+  const isVisible = useRef(false);
+  const animationFrameId = useRef<number | null>(null);
+
+  // Current animated position (for smooth interpolation)
+  const currentPos = useRef({ x: 0, y: 0 });
+
+  // Spring physics parameters
+  const springConfig = { stiffness: 150, damping: 18, mass: 0.8 };
+  const velocity = useRef({ x: 0, y: 0 });
+  const lastTime = useRef(performance.now());
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
+
+    const cursorRing = cursorRingRef.current;
+    const cursorDot = cursorDotRef.current;
+
+    if (!cursorRing || !cursorDot) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      // Store last position for when scrolling ends
-      lastPositionRef.current = { x: e.clientX, y: e.clientY };
-
-      // Skip position update during scroll to prevent cursor flying
-      if (!shouldUpdatePositionRef.current) return;
-
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-      setIsVisible(true);
-
-      if (cursorRef.current) {
-        cursorRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-      }
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-      }
+      // Use clientX/clientY for viewport-relative coordinates
+      // These are independent of scroll position
+      mousePosition.current = { x: e.clientX, y: e.clientY };
+      isVisible.current = true;
     };
 
     const handleMouseLeave = () => {
-      setIsVisible(false);
+      isVisible.current = false;
     };
 
     const handleMouseEnter = () => {
-      setIsVisible(true);
-    };
-
-    const handleScroll = () => {
-      // Hide cursor and stop position updates during scroll
-      setIsScrolling(true);
-      shouldUpdatePositionRef.current = false;
-
-      // Clear existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // Show cursor and resume position updates after scroll stops
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-        shouldUpdatePositionRef.current = true;
-
-        // Restore cursor to last known position
-        const lastPos = lastPositionRef.current;
-        if (cursorRef.current) {
-          cursorRef.current.style.transform = `translate(${lastPos.x}px, ${lastPos.y}px)`;
-        }
-        if (dotRef.current) {
-          dotRef.current.style.transform = `translate(${lastPos.x}px, ${lastPos.y}px)`;
-        }
-        mouseX.set(lastPos.x);
-        mouseY.set(lastPos.y);
-      }, 150);
+      isVisible.current = true;
     };
 
     const checkHoverTargets = (e: MouseEvent) => {
@@ -90,44 +62,84 @@ export default function CustomCursor() {
       setIsHovering(!!isHoverable);
     };
 
+    // Spring physics update function
+    const updateCursor = (time: number) => {
+      const deltaTime = Math.min((time - lastTime.current) / 16.67, 2); // Normalize to ~60fps, cap at 2x
+      lastTime.current = time;
+
+      // Spring physics interpolation
+      const targetX = mousePosition.current.x;
+      const targetY = mousePosition.current.y;
+
+      // Calculate spring force
+      const dx = targetX - currentPos.current.x;
+      const dy = targetY - currentPos.current.y;
+
+      // Spring acceleration
+      const ax = dx * springConfig.stiffness * 0.001 * deltaTime;
+      const ay = dy * springConfig.stiffness * 0.001 * deltaTime;
+
+      // Apply damping
+      velocity.current.x = (velocity.current.x + ax) * Math.pow(0.85, deltaTime);
+      velocity.current.y = (velocity.current.y + ay) * Math.pow(0.85, deltaTime);
+
+      // Update position
+      currentPos.current.x += velocity.current.x * deltaTime;
+      currentPos.current.y += velocity.current.y * deltaTime;
+
+      // Snap to target if close enough
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.5) {
+        currentPos.current.x = targetX;
+        currentPos.current.y = targetY;
+        velocity.current.x = 0;
+        velocity.current.y = 0;
+      }
+
+      // Apply position using translate3d for GPU acceleration
+      const posX = currentPos.current.x;
+      const posY = currentPos.current.y;
+
+      // Update cursor ring
+      cursorRing.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+      cursorRing.style.opacity = isVisible.current ? "1" : "0";
+
+      // Update cursor dot
+      cursorDot.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+      cursorDot.style.opacity = isVisible.current ? "1" : "0";
+
+      animationFrameId.current = requestAnimationFrame(updateCursor);
+    };
+
+    // Add event listeners
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseleave", handleMouseLeave);
     document.addEventListener("mouseenter", handleMouseEnter);
     document.addEventListener("mouseover", checkHoverTargets);
-    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Start animation loop
+    animationFrameId.current = requestAnimationFrame(updateCursor);
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
       document.removeEventListener("mouseenter", handleMouseEnter);
       document.removeEventListener("mouseover", checkHoverTargets);
-      window.removeEventListener("scroll", handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [mouseX, mouseY]);
+  }, [isMounted]);
 
   if (!isMounted) return null;
 
   return (
     <>
-      {/* Main cursor ring */}
-      <motion.div
-        ref={cursorRef}
+      {/* Main cursor ring - using position fixed + translate3d */}
+      <div
+        ref={cursorRingRef}
         className="custom-cursor"
-        animate={{
-          scale: isHovering ? 2.5 : 1,
-          opacity: isScrolling ? 0 : (isVisible ? 1 : 0),
-          backgroundColor: isHovering ? "rgba(255, 107, 53, 0.3)" : "transparent",
-          borderColor: isHovering ? "#FF6B35" : "#ffffff",
-        }}
-        transition={{
-          scale: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
-          opacity: { duration: 0.2 },
-          backgroundColor: { duration: 0.2 },
-          borderColor: { duration: 0.2 },
-        }}
         style={{
           position: "fixed",
           top: 0,
@@ -139,20 +151,13 @@ export default function CustomCursor() {
           pointerEvents: "none",
           zIndex: 99999,
           mixBlendMode: "difference",
+          willChange: "transform, opacity",
         }}
       />
 
       {/* Cursor dot */}
-      <motion.div
-        ref={dotRef}
-        animate={{
-          scale: isHovering ? 0 : 1,
-          opacity: isScrolling ? 0 : (isVisible ? 1 : 0),
-        }}
-        transition={{
-          scale: { duration: 0.15 },
-          opacity: { duration: 0.15 },
-        }}
+      <div
+        ref={cursorDotRef}
         style={{
           position: "fixed",
           top: 0,
@@ -165,6 +170,7 @@ export default function CustomCursor() {
           borderRadius: "50%",
           pointerEvents: "none",
           zIndex: 99999,
+          willChange: "transform, opacity",
         }}
       />
     </>
