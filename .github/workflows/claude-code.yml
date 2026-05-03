@@ -1,0 +1,49 @@
+name: Claude Code Auto Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude_review:
+    # 当有人在 PR 或 Issue 下评论 "@claude" 时，或者新建 PR 时触发
+    if: contains(github.event.comment.body, '@claude') || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Claude Code with Proxy
+        env:
+          # 这里就是读取你刚才在网页上填写的那两个 Secret
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          
+          # 必须开启，允许在第三方代理下使用高级功能
+          ENABLE_TOOL_SEARCH: "true"
+          
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "issue_comment" ]; then
+            # 使用 -p 传入指令，并跳过权限确认
+            claude -p "${{ github.event.comment.body }}" --dangerously-skip-permissions
+          else
+            # 自动化 Review 的指令
+            claude -p "请评审此 PR 的代码变更，重点检查逻辑错误和潜在 Bug，并在发现问题的地方直接尝试修复代码。" --dangerously-skip-permissions
+          fi
