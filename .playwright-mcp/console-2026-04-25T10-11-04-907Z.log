@@ -1,0 +1,2 @@
+[     384ms] [WARNING] Please ensure that the container has a non-static position, like 'relative', 'fixed', or 'absolute' to ensure scroll offset is calculated correctly. @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[     438ms] [WARNING] You are trying to animate backgroundColor from "rgba(0, 0, 0, 0)" to "transparent". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431

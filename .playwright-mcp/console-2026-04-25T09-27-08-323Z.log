@@ -1,0 +1,101 @@
+[     476ms] Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+        <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="workspace/" loading={null}>
+              <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+                <RedirectBoundary>
+                  <RedirectErrorBoundary router={{...}}>
+                    <InnerLayoutRouter url="/workspace" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} ...>
+                      <SegmentViewNode type="page" pagePath="workspace/...">
+                        <SegmentTrieNode>
+                        <ClientPageRoot Component={function WorkspacePage} serverProvidedParams={{...}}>
+                          <WorkspacePage params={Promise} searchParams={Promise}>
+                            <main className="relative b...">
+                              <CustomCursor>
+                                <motion.div ref={{current:null}} className="custom-cursor" ...>
+                                  <div
++                                   className="custom-cursor"
+-                                   className="fixed top-0 left-0 h-0.5 z-[100] bg-gradient-to-r from-[var(--accent-pr..."
+                                    style={{
++                                     position: "fixed"
++                                     top: 0
++                                     left: 0
++                                     width: 20
+-                                     width: "0%"
++                                     height: 20
++                                     marginLeft: -10
++                                     marginTop: -10
++                                     pointerEvents: "none"
++                                     zIndex: 99999
++                                     mixBlendMode: "difference"
+                                    }}
+                                    ref={function useMotionRef.useCallback}
+                                  >
+                                <motion.div ref={{current:null}} animate={{scale:1,opacity:0}} ...>
+                                  <div
+                                    style={{
++                                     position: "fixed"
++                                     top: 0
++                                     left: 0
++                                     width: 6
++                                     height: 6
++                                     marginLeft: -3
++                                     marginTop: -3
++                                     backgroundColor: "#FF6B35"
++                                     borderRadius: "50%"
++                                     pointerEvents: "none"
++                                     zIndex: 99999
+                                    }}
+                                    ref={function useMotionRef.useCallback}
+-                                   className="noise-overlay"
+                                  >
+                              <div
++                               className="fixed top-0 left-0 h-0.5 z-[100] bg-gradient-to-r from-[var(--accent-primar..."
+-                               className="opacity-0"
++                               style={{width:"0%"}}
+-                               style={{}}
+                              >
+-                               <section
+-                                 className="relative min-h-screen flex items-center justify-center overflow-hidden"
+-                                 style={{opacity:"1",transform:"none"}}
+-                               >
+-                               <section className="relative" style={{height:"400vh"}}>
+-                               <section className="relative py-32 px-8 bg-[var(--bg-primary)]">
+-                               <footer className="relative bg-[var(--bg-secondary)] overflow-hidden">
+                              ...
+                      ...
+                    ...
+          ...
+
+    at throwOnHydrationMismatch (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:3318:56)
+    at popHydrationState (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:3403:13)
+    at completeWork (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:6922:25)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:965:74)
+    at completeUnitOfWork (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:9622:23)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:9557:28)
+    at workLoopConcurrentByScheduler (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:9551:58)
+    at renderRootConcurrent (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:9534:71)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_react-dom_12~th__._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/0bhx_next_dist_compiled_00eovv2._.js:2647:64)
+[     477ms] [WARNING] Please ensure that the container has a non-static position, like 'relative', 'fixed', or 'absolute' to ensure scroll offset is calculated correctly. @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[     500ms] [WARNING] You are trying to animate backgroundColor from "rgba(0, 0, 0, 0)" to "transparent". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[    5682ms] [WARNING] You are trying to animate backgroundColor from "transparent" to "rgba(255, 107, 53, 0.3)". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[    5690ms] [WARNING] You are trying to animate backgroundColor from "rgba(255, 107, 53, 0.3)" to "transparent". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[    6286ms] [WARNING] You are trying to animate backgroundColor from "transparent" to "rgba(255, 107, 53, 0.3)". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[    6369ms] [WARNING] You are trying to animate backgroundColor from "rgba(255, 107, 53, 0.3)" to "transparent". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
+[  119602ms] [WARNING] You are trying to animate backgroundColor from "rgba(0, 0, 0, 0)" to "transparent". "transparent" is not an animatable value.. For more information and steps for solving, visit https://motion.dev/troubleshooting/value-not-animatable @ http://localhost:3000/_next/static/chunks/0bhx_next_dist_0v8l0p4._.js:2431
