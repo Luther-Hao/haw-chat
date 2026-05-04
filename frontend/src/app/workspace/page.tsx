@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import {
   Plus,
   Settings,
@@ -310,9 +311,9 @@ const MessageBubble = ({
               <Bot size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <p className="text-slate-800 dark:text-slate-200 text-[15px] leading-relaxed">
-                {message.content}
-              </p>
+              <div className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
               <div className="flex items-center gap-2 mt-2">
                 <motion.button
                   onClick={() => onCopy(message.content)}
@@ -390,8 +391,8 @@ const InputBar = ({
           )}
         </AnimatePresence>
 
-        <div className="flex items-end gap-3">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-row items-center gap-3 pb-2">
+          <div className="flex items-center gap-1 pb-2">
             <motion.button
               className="p-2.5 rounded-xl hover:bg-white/20 transition-colors"
               whileHover={{ scale: 1.1 }}
@@ -419,7 +420,7 @@ const InputBar = ({
             onBlur={() => setIsFocused(false)}
             placeholder={t.placeholder}
             rows={1}
-            className="flex-1 bg-transparent resize-none text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none text-[15px] max-h-40"
+            className="flex-1 bg-transparent resize-none text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none text-[15px] max-h-40 pb-2"
             style={{ minHeight: "24px" }}
             disabled={disabled}
           />
@@ -427,7 +428,7 @@ const InputBar = ({
           <motion.button
             onClick={handleSend}
             disabled={!input.trim() || disabled}
-            className={`p-3 rounded-2xl transition-all ${
+            className={`h-8 w-8 flex items-center justify-center rounded-2xl transition-all flex-shrink-0 ${
               input.trim() && !disabled
                 ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg shadow-orange-500/25"
                 : "bg-white/20 text-slate-400"
@@ -435,7 +436,7 @@ const InputBar = ({
             whileHover={input.trim() && !disabled ? { scale: 1.1 } : {}}
             whileTap={input.trim() && !disabled ? { scale: 0.9 } : {}}
           >
-            <Send size={20} />
+            <Send size={18} />
           </motion.button>
         </div>
       </motion.div>
@@ -511,9 +512,10 @@ export default function WorkspacePage() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Process streaming response
+      // Process streaming response with throttled rendering
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      let fullContent = "";
 
       if (reader) {
         let done = false;
@@ -531,12 +533,15 @@ export default function WorkspacePage() {
                   const data = JSON.parse(line.slice(6));
 
                   if (data.type === "content") {
-                    // Update the assistant message content incrementally
-                    assistantMessage.content += data.content;
+                    // Append to full content
+                    fullContent += data.content;
+
+                    // Throttle the display update for smoother typing effect
+                    await new Promise(resolve => setTimeout(resolve, 25));
                     setMessages((prev) =>
                       prev.map((m) =>
                         m.id === assistantMessageId
-                          ? { ...m, content: assistantMessage.content }
+                          ? { ...m, content: fullContent }
                           : m
                       )
                     );
@@ -544,7 +549,6 @@ export default function WorkspacePage() {
                     done = true;
                   }
                 } catch (e) {
-                  // Skip invalid JSON chunks
                   console.warn("Invalid chunk:", line);
                 }
               }
