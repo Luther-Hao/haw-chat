@@ -291,7 +291,7 @@ const MessageBubble = ({
 
   return (
     <motion.div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
@@ -299,13 +299,13 @@ const MessageBubble = ({
       <motion.div
         className={`relative max-w-[75%] ${
           isUser
-            ? "bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-br-sm px-4 py-3"
+            ? "bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-2xl rounded-br-sm px-5 py-4"
             : "bg-transparent"
         }`}
         whileHover={{ scale: isEmpty ? 1 : 1.01 }}
       >
         {isUser ? (
-          <p className="text-zinc-800 dark:text-zinc-200 text-[15px] leading-relaxed">
+          <p className="text-slate-800 dark:text-slate-200 text-base font-medium leading-relaxed tracking-wide">
             {message.content}
           </p>
         ) : (
@@ -324,7 +324,7 @@ const MessageBubble = ({
                   </div>
                 </div>
               ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
+                <div className="prose prose-base dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-7">
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
               )}

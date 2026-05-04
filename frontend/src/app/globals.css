@@ -20,6 +20,15 @@
   --color-notion-accent: var(--notion-accent);
 }
 
+/* Message bubble styling standards */
+:root {
+  --message-text-size: 16px;
+  --message-line-height: 1.5;
+  --message-spacing: 24px;
+  --bubble-padding-x: 16px;
+  --bubble-padding-y: 12px;
+}
+
 body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
