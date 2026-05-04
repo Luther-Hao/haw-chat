@@ -299,13 +299,13 @@ const MessageBubble = ({
       <motion.div
         className={`relative max-w-[75%] ${
           isUser
-            ? "bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-2xl rounded-br-sm px-5 py-4"
+            ? "bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-br-sm px-5 py-4"
             : "bg-transparent"
         }`}
         whileHover={{ scale: isEmpty ? 1 : 1.01 }}
       >
         {isUser ? (
-          <p className="text-slate-800 dark:text-slate-200 text-base font-medium leading-relaxed tracking-wide">
+          <p className="text-slate-700 dark:text-slate-100 text-[15px] sm:text-[16px] font-medium leading-[1.6] tracking-normal">
             {message.content}
           </p>
         ) : (
@@ -324,8 +324,45 @@ const MessageBubble = ({
                   </div>
                 </div>
               ) : (
-                <div className="prose prose-base dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-7">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                <div className="text-[15px] sm:text-[16px] text-slate-700 dark:text-slate-200 leading-[1.65] tracking-normal">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-4 last:mb-0 leading-[1.65]">{children}</p>,
+                      h1: ({ children }) => <h1 className="text-xl font-semibold mt-6 mb-3 text-slate-800 dark:text-slate-100">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-lg font-semibold mt-5 mb-2 text-slate-800 dark:text-slate-100">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-base font-semibold mt-4 mb-2 text-slate-800 dark:text-slate-100">{children}</h3>,
+                      ul: ({ children }) => <ul className="list-disc list-outside ml-5 my-3 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-outside ml-5 my-3 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      code: ({ children, className }) => {
+                        const isInline = !className;
+                        return isInline ? (
+                          <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[14px] font-mono text-pink-600 dark:text-pink-400">
+                            {children}
+                          </code>
+                        ) : (
+                          <code className="block bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-xl overflow-x-auto my-4 text-[14px] font-mono leading-relaxed">
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre: ({ children }) => <pre className="bg-slate-900 dark:bg-slate-950 rounded-xl overflow-hidden my-4">{children}</pre>,
+                      a: ({ children, href }) => (
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300">
+                          {children}
+                        </a>
+                      ),
+                      strong: ({ children }) => <strong className="font-semibold text-slate-800 dark:text-slate-100">{children}</strong>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-slate-300 dark:border-slate-600 pl-4 my-4 italic text-slate-600 dark:text-slate-400">
+                          {children}
+                        </blockquote>
+                      ),
+                      hr: () => <hr className="border-slate-200 dark:border-slate-700 my-6" />,
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
               )}
               {/* Action buttons - only show when content exists */}
