@@ -57,7 +57,13 @@
       "Bash(git config *)",
       "Bash(rm -rf .git)",
       "Bash(git init *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(pip install *)",
+      "Bash(git-filter-repo --help)",
+      "Bash(git filter-repo *)",
+      "Bash(ping *)",
+      "Bash(taskkill /F /PID 38080)",
+      "Bash(taskkill *)"
     ]
   }
 }
