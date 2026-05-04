@@ -293,15 +293,15 @@ const MessageBubble = ({
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <motion.div
-        className={`relative max-w-[80%] ${
+        className={`relative max-w-[75%] ${
           isUser
-            ? "bg-white/30 dark:bg-white/20 backdrop-blur-xl rounded-3xl rounded-tr-md px-5 py-3"
+            ? "bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-br-sm px-4 py-3"
             : "bg-transparent"
         }`}
         whileHover={{ scale: 1.01 }}
       >
         {isUser ? (
-          <p className="text-slate-800 dark:text-slate-200 text-[15px] leading-relaxed">
+          <p className="text-zinc-800 dark:text-zinc-200 text-[15px] leading-relaxed">
             {message.content}
           </p>
         ) : (
