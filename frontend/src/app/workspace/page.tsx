@@ -278,13 +278,16 @@ const Sidebar = ({
 const MessageBubble = ({
   message,
   onCopy,
-  onDelete
+  onDelete,
+  isStreaming
 }: {
   message: { id: string; role: "user" | "assistant"; content: string };
   onCopy: (content: string) => void;
   onDelete: (id: string) => void;
+  isStreaming?: boolean;
 }) => {
   const isUser = message.role === "user";
+  const isEmpty = !message.content;
 
   return (
     <motion.div
@@ -299,7 +302,7 @@ const MessageBubble = ({
             ? "bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-br-sm px-4 py-3"
             : "bg-transparent"
         }`}
-        whileHover={{ scale: 1.01 }}
+        whileHover={{ scale: isEmpty ? 1 : 1.01 }}
       >
         {isUser ? (
           <p className="text-zinc-800 dark:text-zinc-200 text-[15px] leading-relaxed">
@@ -311,27 +314,41 @@ const MessageBubble = ({
               <Bot size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <div className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <motion.button
-                  onClick={() => onCopy(message.content)}
-                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Copy size={14} className="text-slate-400" />
-                </motion.button>
-                <motion.button
-                  onClick={() => onDelete(message.id)}
-                  className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Trash2 size={14} className="text-slate-400" />
-                </motion.button>
-              </div>
+              {/* Show typing indicator when content is empty, otherwise show markdown */}
+              {isEmpty || isStreaming ? (
+                <div className="glass-message px-4 py-3 min-h-[48px]">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              )}
+              {/* Action buttons - only show when content exists */}
+              {!isEmpty && !isStreaming && (
+                <div className="flex items-center gap-2 mt-2">
+                  <motion.button
+                    onClick={() => onCopy(message.content)}
+                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Copy size={14} className="text-slate-400" />
+                  </motion.button>
+                  <motion.button
+                    onClick={() => onDelete(message.id)}
+                    className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Trash2 size={14} className="text-slate-400" />
+                  </motion.button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -706,34 +723,18 @@ export default function WorkspacePage() {
                 </motion.div>
               ) : (
                 <div className="space-y-2 pt-4">
-                  {messages.map((message) => (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      onCopy={handleCopyMessage}
-                      onDelete={handleDeleteMessage}
-                    />
-                  ))}
-
-                  {/* Typing Indicator */}
-                  {isTyping && (
-                    <motion.div
-                      className="flex items-start gap-3 mb-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0">
-                        <Bot size={20} className="text-white" />
-                      </div>
-                      <div className="glass-message px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
+                  {messages.map((message, index) => {
+                    const isLastMessage = index === messages.length - 1;
+                    return (
+                      <MessageBubble
+                        key={message.id}
+                        message={message}
+                        onCopy={handleCopyMessage}
+                        onDelete={handleDeleteMessage}
+                        isStreaming={isLastMessage && isTyping && !message.content}
+                      />
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </div>
               )}
