@@ -469,6 +469,7 @@ export default function WorkspacePage() {
   const [messages, setMessages] = useState<{ id: string; role: "user" | "assistant"; content: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState<string>("");
   const [chatHistory] = useState<any[]>([
     { id: "1", title: "AI Research Discussion", date: "today", messages: [] },
     { id: "2", title: "Project Ideas", date: "today", messages: [] },
@@ -478,11 +479,12 @@ export default function WorkspacePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
 
-  // Character buffer queue refs for streaming
+  // Streaming refs - refs for high-frequency data to avoid stale closures
   const streamingMessageIdRef = useRef<string | null>(null);
-  const fullReceivedTextRef = useRef<string>("");
-  const displayedTextRef = useRef<string>("");
+  const fullTextRef = useRef<string>("");
+  const currentIndexRef = useRef<number>(0);
   const bufferIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isSseDoneRef = useRef<boolean>(false);
 
   // Apply dark mode
   useEffect(() => {
@@ -500,15 +502,15 @@ export default function WorkspacePage() {
 
   // Character buffer queue loop for typewriter effect
   useEffect(() => {
-    if (!streamingMessageIdRef.current || !isTyping) return;
+    if (!streamingMessageIdRef.current) return;
 
     bufferIntervalRef.current = setInterval(() => {
-      const fullText = fullReceivedTextRef.current;
-      let displayText = displayedTextRef.current;
+      const fullText = fullTextRef.current;
+      const currentIdx = currentIndexRef.current;
 
       // Check if there's new content to display
-      if (displayText.length < fullText.length) {
-        const diff = fullText.length - displayText.length;
+      if (currentIdx < fullText.length) {
+        const diff = fullText.length - currentIdx;
 
         // Adaptive speed: if buffer is large, catch up faster
         let charsToAdd = 1;
@@ -516,24 +518,20 @@ export default function WorkspacePage() {
         else if (diff > 50) charsToAdd = 3;
         else if (diff > 20) charsToAdd = 2;
 
-        // Append characters
-        displayText = fullText.slice(0, displayText.length + charsToAdd);
-        displayedTextRef.current = displayText;
+        // Extract characters and update index
+        const newChars = fullText.slice(currentIdx, currentIdx + charsToAdd);
+        currentIndexRef.current = currentIdx + charsToAdd;
 
-        // Update message state
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === streamingMessageIdRef.current
-              ? { ...m, content: displayText }
-              : m
-          )
-        );
-      } else if (!isTyping && bufferIntervalRef.current) {
+        // Update displayed text state (this triggers re-render)
+        setDisplayedText(prev => prev + newChars);
+      } else if (isSseDoneRef.current && currentIdx >= fullText.length) {
         // Streaming finished and caught up, clear interval
-        clearInterval(bufferIntervalRef.current);
-        bufferIntervalRef.current = null;
+        if (bufferIntervalRef.current) {
+          clearInterval(bufferIntervalRef.current);
+          bufferIntervalRef.current = null;
+        }
       }
-    }, 16); // ~60fps
+    }, 20); // 20ms = 50fps
 
     return () => {
       if (bufferIntervalRef.current) {
@@ -541,7 +539,20 @@ export default function WorkspacePage() {
         bufferIntervalRef.current = null;
       }
     };
-  }, [isTyping]);
+  }, []); // Empty deps - interval only depends on refs
+
+  // Sync displayedText to messages array for persistence
+  useEffect(() => {
+    if (streamingMessageIdRef.current && displayedText) {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === streamingMessageIdRef.current
+            ? { ...m, content: displayedText }
+            : m
+        )
+      );
+    }
+  }, [displayedText]);
 
   const handleSendMessage = async (content: string) => {
     const userMessage = { id: Date.now().toString(), role: "user" as const, content };
@@ -574,8 +585,10 @@ export default function WorkspacePage() {
       // Create assistant message placeholder for streaming
       const assistantMessageId = (Date.now() + 1).toString();
       streamingMessageIdRef.current = assistantMessageId;
-      fullReceivedTextRef.current = "";
-      displayedTextRef.current = "";
+      fullTextRef.current = "";
+      currentIndexRef.current = 0;
+      isSseDoneRef.current = false;
+      setDisplayedText("");
 
       let assistantMessage = {
         id: assistantMessageId,
@@ -605,9 +618,10 @@ export default function WorkspacePage() {
 
                   if (data.type === "content") {
                     // Append to buffer (ref), not to state directly
-                    fullReceivedTextRef.current += data.content;
+                    fullTextRef.current += data.content;
                   } else if (data.type === "done") {
                     done = true;
+                    isSseDoneRef.current = true;
                   }
                 } catch (e) {
                   console.warn("Invalid chunk:", line);
@@ -630,17 +644,17 @@ export default function WorkspacePage() {
     } finally {
       // Small delay to let buffer catch up before clearing typing state
       setTimeout(() => {
+        isSseDoneRef.current = true;
+        // Flush remaining content
+        const remainingText = fullTextRef.current.slice(currentIndexRef.current);
+        if (remainingText) {
+          setDisplayedText(prev => prev + remainingText);
+          currentIndexRef.current = fullTextRef.current.length;
+        }
         setIsTyping(false);
-        // Flush remaining content to displayed
-        displayedTextRef.current = fullReceivedTextRef.current;
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === streamingMessageIdRef.current
-              ? { ...m, content: fullReceivedTextRef.current }
-              : m
-          )
-        );
-        streamingMessageIdRef.current = null;
+        setTimeout(() => {
+          streamingMessageIdRef.current = null;
+        }, 100);
       }, 100);
     }
   };
@@ -783,13 +797,15 @@ export default function WorkspacePage() {
                 <div className="space-y-2 pt-4">
                   {messages.map((message, index) => {
                     const isLastMessage = index === messages.length - 1;
+                    // Show typing indicator only when last message has no content
+                    const showTyping = isLastMessage && isTyping && !message.content;
                     return (
                       <MessageBubble
                         key={message.id}
                         message={message}
                         onCopy={handleCopyMessage}
                         onDelete={handleDeleteMessage}
-                        isStreaming={isLastMessage && isTyping && !message.content}
+                        isStreaming={showTyping}
                       />
                     );
                   })}
