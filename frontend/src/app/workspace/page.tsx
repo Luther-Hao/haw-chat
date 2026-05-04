@@ -478,6 +478,12 @@ export default function WorkspacePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const t = translations[lang];
 
+  // Character buffer queue refs for streaming
+  const streamingMessageIdRef = useRef<string | null>(null);
+  const fullReceivedTextRef = useRef<string>("");
+  const displayedTextRef = useRef<string>("");
+  const bufferIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Apply dark mode
   useEffect(() => {
     if (isDark) {
@@ -491,6 +497,51 @@ export default function WorkspacePage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Character buffer queue loop for typewriter effect
+  useEffect(() => {
+    if (!streamingMessageIdRef.current || !isTyping) return;
+
+    bufferIntervalRef.current = setInterval(() => {
+      const fullText = fullReceivedTextRef.current;
+      let displayText = displayedTextRef.current;
+
+      // Check if there's new content to display
+      if (displayText.length < fullText.length) {
+        const diff = fullText.length - displayText.length;
+
+        // Adaptive speed: if buffer is large, catch up faster
+        let charsToAdd = 1;
+        if (diff > 100) charsToAdd = 4;
+        else if (diff > 50) charsToAdd = 3;
+        else if (diff > 20) charsToAdd = 2;
+
+        // Append characters
+        displayText = fullText.slice(0, displayText.length + charsToAdd);
+        displayedTextRef.current = displayText;
+
+        // Update message state
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === streamingMessageIdRef.current
+              ? { ...m, content: displayText }
+              : m
+          )
+        );
+      } else if (!isTyping && bufferIntervalRef.current) {
+        // Streaming finished and caught up, clear interval
+        clearInterval(bufferIntervalRef.current);
+        bufferIntervalRef.current = null;
+      }
+    }, 16); // ~60fps
+
+    return () => {
+      if (bufferIntervalRef.current) {
+        clearInterval(bufferIntervalRef.current);
+        bufferIntervalRef.current = null;
+      }
+    };
+  }, [isTyping]);
 
   const handleSendMessage = async (content: string) => {
     const userMessage = { id: Date.now().toString(), role: "user" as const, content };
@@ -522,6 +573,10 @@ export default function WorkspacePage() {
 
       // Create assistant message placeholder for streaming
       const assistantMessageId = (Date.now() + 1).toString();
+      streamingMessageIdRef.current = assistantMessageId;
+      fullReceivedTextRef.current = "";
+      displayedTextRef.current = "";
+
       let assistantMessage = {
         id: assistantMessageId,
         role: "assistant" as const,
@@ -529,10 +584,9 @@ export default function WorkspacePage() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Process streaming response with throttled rendering
+      // Process streaming response - append to buffer, not directly to state
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let fullContent = "";
 
       if (reader) {
         let done = false;
@@ -550,18 +604,8 @@ export default function WorkspacePage() {
                   const data = JSON.parse(line.slice(6));
 
                   if (data.type === "content") {
-                    // Append to full content
-                    fullContent += data.content;
-
-                    // Throttle the display update for smoother typing effect
-                    await new Promise(resolve => setTimeout(resolve, 25));
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === assistantMessageId
-                          ? { ...m, content: fullContent }
-                          : m
-                      )
-                    );
+                    // Append to buffer (ref), not to state directly
+                    fullReceivedTextRef.current += data.content;
                   } else if (data.type === "done") {
                     done = true;
                   }
@@ -575,6 +619,7 @@ export default function WorkspacePage() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      streamingMessageIdRef.current = null;
       // Show error message
       const errorMessage = {
         id: (Date.now() + 1).toString(),
@@ -583,7 +628,20 @@ export default function WorkspacePage() {
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsTyping(false);
+      // Small delay to let buffer catch up before clearing typing state
+      setTimeout(() => {
+        setIsTyping(false);
+        // Flush remaining content to displayed
+        displayedTextRef.current = fullReceivedTextRef.current;
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === streamingMessageIdRef.current
+              ? { ...m, content: fullReceivedTextRef.current }
+              : m
+          )
+        );
+        streamingMessageIdRef.current = null;
+      }, 100);
     }
   };
 
