@@ -63,7 +63,9 @@
       "Bash(git filter-repo *)",
       "Bash(ping *)",
       "Bash(taskkill /F /PID 38080)",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(git fetch *)",
+      "Bash(git rebase *)"
     ]
   }
 }
