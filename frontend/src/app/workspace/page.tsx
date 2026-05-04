@@ -568,7 +568,7 @@ export default function WorkspacePage() {
         bufferIntervalRef.current = null;
       }
     };
-  }, []); // Empty deps - typewriter uses refs, no stale closures
+  }, [streamingMessageIdRef.current]); // Re-run when new streaming session starts
 
   // Sync displayedText to messages array for persistence
   useEffect(() => {
