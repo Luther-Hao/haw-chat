@@ -1,0 +1,106 @@
+# Haw Chat Backend Configuration
+
+app:
+  name: "Haw Chat Agent"
+  version: "1.0.0"
+  description: "AI Agent with Lead Agent + Sub-agent Architecture"
+
+# Model Configuration
+models:
+  - name: gpt-4o
+    provider: openai
+    api_key_env: OPENAI_API_KEY
+    base_url: "https://api.openai.com/v1"
+    supports_thinking: false
+    supports_vision: true
+    default: true
+
+  - name: claude-3.5-sonnet-20240620
+    provider: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: "https://api.anthropic.com"
+    supports_thinking: true
+    supports_vision: true
+
+  - name: deepseek-chat
+    provider: deepseek
+    api_key_env: DEEPSEEK_API_KEY
+    base_url: "https://api.deepseek.com"
+    supports_thinking: true
+    supports_vision: false
+
+# Tool Configuration
+tools:
+  - name: bash
+    enabled: true
+    description: "Execute shell commands in the sandbox environment"
+
+  - name: read_file
+    enabled: true
+    description: "Read contents of a file"
+
+  - name: write_file
+    enabled: true
+    description: "Write content to a file"
+
+  - name: list_dir
+    enabled: true
+    description: "List directory contents"
+
+  - name: web_search
+    enabled: false
+    description: "Search the web for information"
+
+# Sandbox Configuration
+sandbox:
+  type: local  # local, docker, remote
+  base_path: "./workspace"
+  max_execution_time: 300  # seconds
+
+# Memory Configuration
+memory:
+  enabled: false
+  storage_path: "./memory.json"
+
+# Sub-agent Configuration
+subagents:
+  enabled: true
+  max_concurrent: 3
+  timeout_seconds: 900  # 15 minutes
+
+# Middleware Configuration
+middleware:
+  - name: thread_data
+    enabled: true
+  - name: sandbox
+    enabled: true
+  - name: memory
+    enabled: false
+  - name: title
+    enabled: true
+
+# System Prompt
+system_prompt: |
+  You are LEO, an advanced AI assistant built with Haw Chat Agent framework.
+
+  Your capabilities include:
+  - Natural language understanding and generation
+  - Code writing, debugging, and explanation
+  - Research and information synthesis
+  - File operations within the sandbox environment
+  - Task decomposition and delegation to sub-agents
+
+  When working with files or code:
+  - Always use the sandbox tools to read/write files
+  - Verify file operations succeeded before proceeding
+  - Handle errors gracefully and inform the user
+
+  For complex tasks, consider:
+  - Breaking down the task into smaller steps
+  - Using sub-agents for parallel execution when appropriate
+  - Maintaining context across the conversation
+
+  Work directory: /mnt/workspace
+  - /mnt/workspace: Your working directory for file operations
+  - /mnt/outputs: Output files location
+  - /mnt/uploads: Uploaded user files

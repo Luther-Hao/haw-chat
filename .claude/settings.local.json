@@ -65,7 +65,11 @@
       "Bash(taskkill /F /PID 38080)",
       "Bash(taskkill *)",
       "Bash(git fetch *)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "Bash(python -m py_compile main.py)",
+      "Bash(python -m py_compile utils/config.py)",
+      "Bash(python -m py_compile agent/thread_state.py)",
+      "Bash(python -m py_compile agent/model_factory.py)"
     ]
   }
 }
