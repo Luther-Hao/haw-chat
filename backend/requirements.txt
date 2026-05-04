@@ -1,10 +1,21 @@
 # Haw Chat Backend - Python Dependencies
 
-# Core dependencies will be added as the backend develops
-# Examples:
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# HTTP client (for future AI API integrations)
+httpx>=0.26.0
+
+# Async support
+anyio>=4.0.0
+
+# Optional: For future AI integrations
 # anthropic>=0.21.0  # Claude API
-# openai>=1.12.0      # OpenAI API
-# fastapi>=0.109.0    # Web framework
-# uvicorn>=0.27.0     # ASGI server
-# pydantic>=2.5.0     # Data validation
-# python-dotenv>=1.0.0  # Environment variables
+# openai>=1.12.0     # OpenAI API

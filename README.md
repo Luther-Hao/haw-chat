@@ -10,31 +10,58 @@ haw-chat/
 │   ├── src/          # Source code (app, components, styles)
 │   ├── public/       # Static assets
 │   ├── node_modules/ # Dependencies
+│   ├── .env.local    # Frontend environment variables
 │   └── package.json
 ├── backend/          # Python AI agent backend
-│   ├── main.py
-│   └── requirements.txt
+│   ├── main.py       # FastAPI server with streaming support
+│   ├── requirements.txt
+│   └── .env          # Backend environment variables
 └── [root-level config files]
 ```
 
-## Getting Started
+## Quick Start
 
-### Frontend Setup
+### Running Frontend and Backend Together
 
+**Option 1: Two Terminals (Recommended for development)**
+
+Terminal 1 - Start Backend:
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+Backend runs at: http://localhost:8000
+
+Terminal 2 - Start Frontend:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+Frontend runs at: http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) to view the portfolio.
-
-### Backend Setup
+**Option 2: Concurrently (Run both in one terminal)**
 
 ```bash
-cd backend
-pip install -r requirements.txt
-python main.py
+# Install concurrently globally
+npm install -g concurrently
+
+# Run both frontend and backend
+concurrently "cd frontend && npm run dev" "cd backend && python main.py"
+```
+
+### Environment Configuration
+
+**Frontend** (`frontend/.env.local`):
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+**Backend** (`backend/.env`):
+```env
+PORT=8000
+HOST=0.0.0.0
 ```
 
 ## Features
@@ -46,9 +73,31 @@ python main.py
 - **Framer Motion** - Smooth animations and parallax effects
 - **Custom Cursor** - Spring physics-based cursor follower
 - **Responsive Design** - Mobile-first approach
+- **Streaming Chat** - Real-time AI responses via Server-Sent Events
 
 ### Backend
-- Python AI agent framework (in development)
+- **FastAPI Server** - High-performance Python web framework
+- **Streaming Responses** - Server-Sent Events (SSE) for real-time chat
+- **CORS Enabled** - Ready for frontend integration
+- **Mock AI Responses** - Demo mode (replace with real AI in production)
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check |
+| GET | `/health` | Detailed health status |
+| POST | `/chat` | Non-streaming chat (request/response) |
+| POST | `/chat/stream` | Streaming chat via SSE |
+| GET | `/history` | Chat history (placeholder) |
+
+### Request Example
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Hello!", "chat_history": []}'
+```
 
 ## Tech Stack
 
@@ -62,12 +111,14 @@ python main.py
 
 ### Backend
 - Python 3.10+
-- FastAPI (planned)
-- Anthropic Claude API (planned)
+- FastAPI
+- Uvicorn (ASGI server)
+- Pydantic (data validation)
 
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Framer Motion](https://www.framer.com/motion/)
 - [Tailwind CSS](https://tailwindcss.com/)
 

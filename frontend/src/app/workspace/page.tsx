@@ -49,7 +49,9 @@ const translations = {
     thinking: "Thinking...",
     sidebarTitle: "LEO Chat",
     closeSidebar: "Close sidebar",
-    openSidebar: "Open sidebar"
+    openSidebar: "Open sidebar",
+    connectionError: "Connection error. Please try again.",
+    sendingMessage: "Sending..."
   },
   zh: {
     newChat: "新对话",
@@ -72,9 +74,14 @@ const translations = {
     thinking: "思考中...",
     sidebarTitle: "LEO 助手",
     closeSidebar: "关闭侧边栏",
-    openSidebar: "打开侧边栏"
+    openSidebar: "打开侧边栏",
+    connectionError: "连接错误，请重试。",
+    sendingMessage: "发送中..."
   }
 };
+
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Floating blob component
 const FloatingBlob = ({
@@ -472,15 +479,91 @@ export default function WorkspacePage() {
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
-    setTimeout(() => {
-      const aiMessage = {
+    try {
+      // Prepare chat history for backend
+      const chatHistory = messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      // Call backend streaming API
+      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: content,
+          chat_history: chatHistory
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Create assistant message placeholder for streaming
+      const assistantMessageId = (Date.now() + 1).toString();
+      let assistantMessage = {
+        id: assistantMessageId,
+        role: "assistant" as const,
+        content: ""
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Process streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        let done = false;
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+
+          if (value) {
+            const chunk = decoder.decode(value, { stream: !doneReading });
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  if (data.type === "content") {
+                    // Update the assistant message content incrementally
+                    assistantMessage.content += data.content;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMessageId
+                          ? { ...m, content: assistantMessage.content }
+                          : m
+                      )
+                    );
+                  } else if (data.type === "done") {
+                    done = true;
+                  }
+                } catch (e) {
+                  // Skip invalid JSON chunks
+                  console.warn("Invalid chunk:", line);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Show error message
+      const errorMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant" as const,
-        content: "I understand your message. This is a demo interface - in a real implementation, this would connect to an AI backend. Feel free to type more messages to see the interface in action!"
+        content: t.connectionError
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleNewChat = () => {
