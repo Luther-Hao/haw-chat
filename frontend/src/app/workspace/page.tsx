@@ -500,46 +500,75 @@ export default function WorkspacePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Character buffer queue loop for typewriter effect
+  // Character buffer queue loop for smooth typewriter effect
   useEffect(() => {
     if (!streamingMessageIdRef.current) return;
 
-    bufferIntervalRef.current = setInterval(() => {
+    // Typewriter tick function - recursively schedules itself with dynamic delay
+    const typewriterTick = () => {
       const fullText = fullTextRef.current;
       const currentIdx = currentIndexRef.current;
+
+      // Check if streaming is complete
+      if (isSseDoneRef.current && currentIdx >= fullText.length) {
+        // Streaming finished and caught up - done
+        bufferIntervalRef.current = null;
+        // Signal that typing is complete
+        setIsTyping(false);
+        // Clean up streaming refs after a short delay
+        setTimeout(() => {
+          streamingMessageIdRef.current = null;
+        }, 100);
+        return;
+      }
 
       // Check if there's new content to display
       if (currentIdx < fullText.length) {
         const diff = fullText.length - currentIdx;
 
-        // Adaptive speed: if buffer is large, catch up faster
+        // Determine characters to add and delay based on buffer size
         let charsToAdd = 1;
-        if (diff > 100) charsToAdd = 4;
-        else if (diff > 50) charsToAdd = 3;
-        else if (diff > 20) charsToAdd = 2;
+        let delay = 50; // Default comfortable speed (20 chars/sec)
+
+        if (diff > 100) {
+          // Extremely behind: allow burst to catch up
+          charsToAdd = 3;
+          delay = 15; // Fast catch-up
+        } else if (diff > 50) {
+          // Moderately behind: faster but still smooth
+          charsToAdd = 2;
+          delay = 20;
+        } else if (diff > 20) {
+          // Slightly behind: moderate speed
+          delay = 15;
+        }
+        // diff <= 20: single char at comfortable 50ms
 
         // Extract characters and update index
         const newChars = fullText.slice(currentIdx, currentIdx + charsToAdd);
         currentIndexRef.current = currentIdx + charsToAdd;
 
-        // Update displayed text state (this triggers re-render)
+        // Update displayed text state
         setDisplayedText(prev => prev + newChars);
-      } else if (isSseDoneRef.current && currentIdx >= fullText.length) {
-        // Streaming finished and caught up, clear interval
-        if (bufferIntervalRef.current) {
-          clearInterval(bufferIntervalRef.current);
-          bufferIntervalRef.current = null;
-        }
+
+        // Schedule next tick with calculated delay
+        bufferIntervalRef.current = setTimeout(typewriterTick, delay);
+      } else {
+        // No content yet, keep waiting (SSE may still be sending)
+        bufferIntervalRef.current = setTimeout(typewriterTick, 50);
       }
-    }, 20); // 20ms = 50fps
+    };
+
+    // Start the typewriter loop
+    bufferIntervalRef.current = setTimeout(typewriterTick, 50);
 
     return () => {
       if (bufferIntervalRef.current) {
-        clearInterval(bufferIntervalRef.current);
+        clearTimeout(bufferIntervalRef.current);
         bufferIntervalRef.current = null;
       }
     };
-  }, []); // Empty deps - interval only depends on refs
+  }, []); // Empty deps - typewriter uses refs, no stale closures
 
   // Sync displayedText to messages array for persistence
   useEffect(() => {
@@ -633,6 +662,7 @@ export default function WorkspacePage() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      isSseDoneRef.current = true;
       streamingMessageIdRef.current = null;
       // Show error message
       const errorMessage = {
@@ -641,21 +671,12 @@ export default function WorkspacePage() {
         content: t.connectionError
       };
       setMessages((prev) => [...prev, errorMessage]);
+      setIsTyping(false);
     } finally {
-      // Small delay to let buffer catch up before clearing typing state
-      setTimeout(() => {
-        isSseDoneRef.current = true;
-        // Flush remaining content
-        const remainingText = fullTextRef.current.slice(currentIndexRef.current);
-        if (remainingText) {
-          setDisplayedText(prev => prev + remainingText);
-          currentIndexRef.current = fullTextRef.current.length;
-        }
-        setIsTyping(false);
-        setTimeout(() => {
-          streamingMessageIdRef.current = null;
-        }, 100);
-      }, 100);
+      // Mark SSE as done - typewriter will continue until caught up
+      isSseDoneRef.current = true;
+      // Don't flush content here - let typewriter finish naturally
+      // Don't set isTyping to false here - wait for typewriter to complete
     }
   };
 
@@ -797,12 +818,15 @@ export default function WorkspacePage() {
                 <div className="space-y-2 pt-4">
                   {messages.map((message, index) => {
                     const isLastMessage = index === messages.length - 1;
-                    // Show typing indicator only when last message has no content
-                    const showTyping = isLastMessage && isTyping && !message.content;
+                    // Show typing indicator only when BOTH message content and displayedText are empty
+                    const effectiveContent = isLastMessage && streamingMessageIdRef.current === message.id
+                      ? displayedText || message.content
+                      : message.content;
+                    const showTyping = isLastMessage && isTyping && !effectiveContent;
                     return (
                       <MessageBubble
                         key={message.id}
-                        message={message}
+                        message={{ ...message, content: effectiveContent }}
                         onCopy={handleCopyMessage}
                         onDelete={handleDeleteMessage}
                         isStreaming={showTyping}
